@@ -27,6 +27,7 @@ declare namespace Chat {
     prompt?: string
     usingContext: boolean
     chatModel?: string
+    sessionId?: string
   }
 
   interface ChatState {

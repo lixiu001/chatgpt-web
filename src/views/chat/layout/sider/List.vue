@@ -66,11 +66,7 @@ function isActive(uuid: number) {
                 <SvgIcon icon="ri:message-3-line" />
               </span>
               <div class="relative flex-1 overflow-hidden break-all text-ellipsis whitespace-nowrap">
-                <NInput
-                  v-if="item.isEdit"
-                  v-model:value="item.title" size="tiny"
-                  @keypress="handleEnter(item, false, $event)"
-                />
+                <NInput v-if="item.isEdit" v-model:value="item.title" size="tiny" @keypress="handleEnter(item, false, $event)" />
                 <span v-else>{{ item.title }}</span>
               </div>
               <div v-if="isActive(item.uuid)" class="absolute z-10 flex visible right-1">

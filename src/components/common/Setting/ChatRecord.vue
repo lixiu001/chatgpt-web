@@ -75,10 +75,10 @@ const columns = [{
           show.value = true
           dataSources.value.length = 0
           chatLoading.value = true
-          fetchGetChatHistory(row.uuid, undefined, 'all').then((res: any) => {
-            dataSources.value = res.data as HistoryChat[]
-            chatLoading.value = false
-          })
+          // fetchGetChatHistory(row.uuid, undefined, 'all').then((res: any) => {
+          //   dataSources.value = res.data as HistoryChat[]
+          //   chatLoading.value = false
+          // })
         },
       },
       { default: () => 'view' },

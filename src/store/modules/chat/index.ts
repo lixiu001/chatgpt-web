@@ -81,17 +81,16 @@ export const useChatStore = defineStore('chat-store', {
       try {
         hisroty.loading = true
         const chatIndex = this.chat.findIndex(item => item.uuid === h.uuid)
-        if (chatIndex <= -1 || this.chat[chatIndex].data.length <= 0 || lastId !== undefined) {
+        if (chatIndex <= -1 || this.chat[chatIndex].data.length <= 0 || lastId !== undefined)
           callbackForStartRequest && callbackForStartRequest()
-          const chatData = (await fetchGetChatHistory(h.uuid, lastId)).data
-          if (chatData.length <= 0)
-            hisroty.all = true
+          // const chatData = (await fetchGetChatHistory(h.uuid, lastId)).data
+          // if (chatData.length <= 0)
+          //   hisroty.all = true
 
-          if (chatIndex <= -1)
-            this.chat.unshift({ uuid: h.uuid, data: chatData })
-          else
-            this.chat[chatIndex].data.unshift(...chatData)
-        }
+        // if (chatIndex <= -1)
+        //   this.chat.unshift({ uuid: h.uuid, data: chatData })
+        // else
+        //   this.chat[chatIndex].data.unshift(...chatData)
       }
       finally {
         hisroty.loading = false

@@ -83,17 +83,15 @@ async function onConversation() {
   const message = prompt.value
   if (loading.value)
     return
-
   if (!message || message.trim() === '')
     return
+
   if (nowSelectChatModel.value && currentChatHistory.value)
     currentChatHistory.value.chatModel = nowSelectChatModel.value
 
   const uploadFileKeys = isVisionModel.value ? uploadFileKeysRef.value : []
   uploadFileKeysRef.value = []
-
   controller = new AbortController()
-
   const chatUuid = Date.now()
   addChat(
     +uuid,
@@ -135,69 +133,41 @@ async function onConversation() {
   scrollToBottom()
 
   try {
-    // const lastText = ''
-    // const fetchChatAPIOnce = async () => {
-    //   await fetchChatAPIProcess<Chat.ConversationResponse>({
-    //     roomId: +uuid,
-    //     uuid: chatUuid,
-    //     prompt: message,
-    //     uploadFileKeys,
-    //     options,
-    //     signal: controller.signal,
-    //     onDownloadProgress: ({ event }) => {
-    //       const xhr = event.target
-    //       const { responseText } = xhr
-    //       // Always process the final line
-    //       const lastIndex = responseText.lastIndexOf('\n', responseText.length - 2)
-    //       let chunk = responseText
-    //       if (lastIndex !== -1)
-    //         chunk = responseText.substring(lastIndex)
-    //       try {
-    //         const data = JSON.parse(chunk)
-    //         lastChatInfo = data
-    //         const usage = (data.detail && data.detail.usage)
-    //           ? {
-    //               completion_tokens: data.detail.usage.completion_tokens || null,
-    //               prompt_tokens: data.detail.usage.prompt_tokens || null,
-    //               total_tokens: data.detail.usage.total_tokens || null,
-    //               estimated: data.detail.usage.estimated || null,
-    //             }
-    //           : undefined
-    //         updateChat(
-    //           +uuid,
-    //           dataSources.value.length - 1,
-    //           {
-    //             dateTime: new Date().toLocaleString(),
-    //             text: lastText + (data.text ?? ''),
-    //             inversion: false,
-    //             error: false,
-    //             loading: true,
-    //             conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-    //             requestOptions: { prompt: message, options: { ...options } },
-    //             usage,
-    //           },
-    //         )
-
-    //         if (openLongReply && data.detail && data.detail.choices.length > 0 && data.detail.choices[0].finish_reason === 'length') {
-    //           options.parentMessageId = data.id
-    //           lastText = data.text
-    //           message = ''
-    //           return fetchChatAPIOnce()
-    //         }
-
-    //         scrollToBottomIfAtBottom()
-    //       }
-    //       catch (error) {
-    //         //
-    //       }
-    //     },
-    //   })
-    //   updateChatSome(+uuid, dataSources.value.length - 1, { loading: false })
-    // }
-    const data = await fetchChatAPI(message, sessionId.value)
-    console.log(data)
-
-    // await fetchChatAPIOnce()
+    await fetchChatAPI(message, sessionId.value)
+    const socket = new WebSocket('ws://iia-test.apps.digiwincloud.com.cn/webSocket/1')
+    let sendingInterval: string | number | NodeJS.Timer | undefined
+    if (socket) {
+      sendingInterval = setInterval(() => {
+        socket.send('success') // 定时发送消息
+      }, 60000)
+    }
+    socket.onmessage = (event) => {
+      let msg = '还在努力获取中,请耐心等待....'
+      if (event.data === 'success')
+        return
+      msg = event.data
+      updateChat(
+        +uuid,
+        dataSources.value.length - 1,
+        {
+          dateTime: new Date().toLocaleString(),
+          text: msg,
+          inversion: false,
+          error: false,
+          loading: true,
+          conversationOptions: null,
+          requestOptions: { prompt: message, options: { ...options } },
+          usage: undefined,
+        },
+      )
+      scrollToBottomIfAtBottom()
+      updateChatSome(+uuid, dataSources.value.length - 1, { loading: false })
+      socket.onclose = () => {
+        console.log('Disconnected from WebSocket server')
+      }
+      if (sendingInterval)
+        clearInterval(sendingInterval)
+    }
   }
   catch (error: any) {
     const errorMessage = error?.message ?? t('common.wrong')
@@ -653,11 +623,7 @@ onUnmounted(() => {
   <div class="flex flex-col w-full h-full">
     <main class="flex-1 overflow-hidden">
       <div id="scrollRef" ref="scrollRef" class="h-full overflow-hidden overflow-y-auto" @scroll="handleScroll">
-        <div
-          id="image-wrapper"
-          class="w-full max-w-screen-xl m-auto dark:bg-[#101014]"
-          :class="[isMobile ? 'p-2' : 'p-4']"
-        >
+        <div id="image-wrapper" class="w-full max-w-screen-xl m-auto dark:bg-[#101014]" :class="[isMobile ? 'p-2' : 'p-4']">
           <NSpin :show="firstLoading">
             <template v-if="!dataSources.length">
               <div class="flex items-center justify-center mt-4 text-center text-neutral-300">
@@ -668,31 +634,20 @@ onUnmounted(() => {
             <template v-else>
               <div>
                 <Message
-                  v-for="(item, index) of dataSources"
-                  :key="index"
-                  :index="index"
-                  :current-nav-index="currentNavIndexRef"
-                  :date-time="item.dateTime"
-                  :text="item.text"
-                  :images="item.images"
-                  :inversion="item.inversion"
-                  :response-count="item.responseCount"
-                  :usage="item && item.usage || undefined"
-                  :error="item.error"
-                  :loading="item.loading"
-                  @regenerate="onRegenerate(index)"
-                  @update-current-nav-index="(itemId: number) => updateCurrentNavIndex(index, itemId)"
-                  @delete="(fast) => handleDelete(index, fast)"
-                  @response-history="(ev) => onResponseHistory(index, ev)"
+                  v-for="(item, index) of dataSources" :key="index" :index="index" :current-nav-index="currentNavIndexRef"
+                  :date-time="item.dateTime" :text="item.text" :images="item.images" :inversion="item.inversion"
+                  :response-count="item.responseCount" :usage="item && item.usage || undefined" :error="item.error" :loading="item.loading"
+                  @regenerate="onRegenerate(index)" @update-current-nav-index="(itemId: number) => updateCurrentNavIndex(index, itemId)"
+                  @delete="(fast) => handleDelete(index, fast)" @response-history="(ev) => onResponseHistory(index, ev)"
                 />
-                <div class="sticky bottom-0 left-0 flex justify-center">
+                <!-- <div class="sticky bottom-0 left-0 flex justify-center">
                   <NButton v-if="loading" type="warning" @click="handleStop">
                     <template #icon>
                       <SvgIcon icon="ri:stop-circle-line" />
                     </template>
-                    Stop Responding
-                  </NButton>
-                </div>
+Stop Responding
+</NButton>
+</div> -->
               </div>
             </template>
           </NSpin>
@@ -706,15 +661,10 @@ onUnmounted(() => {
             <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
               <template #default="{ handleInput, handleBlur, handleFocus }">
                 <NInput
-                  ref="inputRef"
-                  v-model:value="prompt"
-                  :disabled="!!authStore.session?.auth && !authStore.token && !authStore.session?.authProxyEnabled"
-                  type="textarea"
-                  :placeholder="placeholder"
-                  :autosize="{ minRows: isMobile ? x1 : 4, maxRows: isMobile ? 4 : 8 }"
-                  @input="handleInput"
-                  @focus="handleFocus"
-                  @blur="handleBlur"
+                  ref="inputRef" v-model:value="prompt"
+                  :disabled="!!authStore.session?.auth && !authStore.token && !authStore.session?.authProxyEnabled" type="textarea"
+                  :placeholder="placeholder" :autosize="{ minRows: isMobile ? x1 : 4, maxRows: isMobile ? 4 : 8 }" @input="handleInput"
+                  @focus="handleFocus" @blur="handleBlur"
                 />
               </template>
             </NAutoComplete>
@@ -729,6 +679,5 @@ onUnmounted(() => {
         </NSpace>
       </div>
     </footer>
-    <Prompt v-if="showPrompt" v-model:roomId="uuid" v-model:visible="showPrompt" />
   </div>
 </template>

@@ -69,7 +69,7 @@ export function post<T = any>(
 ): Promise<Response<T>> {
   headers = {
     ...headers,
-    'token': 'f38f9bbd-47a2-4be5-b1d2-f8df753bf3c8',
+    'token': '63de8dc2-063f-47f6-b950-6997c4cfcd19',
     'digi-middleware-auth-app': 'XXX.XXX.XXX',
     'accept-language': 'zh-CN',
   }

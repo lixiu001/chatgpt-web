@@ -1,28 +1,25 @@
 <script setup lang='ts'>
 import type { Ref } from 'vue'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { MessageReactive, UploadFileInfo } from 'naive-ui'
-import { NAutoComplete, NButton, NInput, NSelect, NSlider, NSpace, NSpin, NUpload, useDialog, useMessage } from 'naive-ui'
+import { NAutoComplete, NButton, NInput, NSpace, NSpin, useDialog, useMessage } from 'naive-ui'
 import html2canvas from 'html2canvas'
 import { Message } from './components'
 import { useScroll } from './hooks/useScroll'
 import { useChat } from './hooks/useChat'
-import HeaderComponent from './components/Header/index.vue'
-import { HoverButton, SvgIcon } from '@/components/common'
+import { SvgIcon } from '@/components/common'
 import { useBasicLayout } from '@/hooks/useBasicLayout'
 import { useAuthStore, useChatStore, usePromptStore, useUserStore } from '@/store'
 import {
+  fetchChatAPI,
   fetchChatAPIProcess,
   fetchChatResponseoHistory,
   fetchChatStopResponding,
 } from '@/api'
 import { t } from '@/locales'
 import { debounce } from '@/utils/functions/debounce'
-import IconPrompt from '@/icons/Prompt.vue'
-
-const Prompt = defineAsyncComponent(() => import('@/components/common/Setting/Prompt.vue'))
 
 let controller = new AbortController()
 let lastChatInfo: any = {}
@@ -44,6 +41,7 @@ const { uuid } = route.params as { uuid: string }
 
 const currentChatHistory = computed(() => chatStore.getChatHistoryByCurrentActive)
 const usingContext = computed(() => currentChatHistory?.value?.usingContext ?? true)
+const sessionId = computed(() => currentChatHistory?.value?.sessionId ?? '')
 const dataSources = computed(() => chatStore.getChatByUuid(+uuid))
 const conversationList = computed(() => dataSources.value.filter(item => (!item.inversion && !!item.conversationOptions)))
 
@@ -82,14 +80,12 @@ function handleSubmit() {
 const uploadFileKeysRef = ref<string[]>([])
 
 async function onConversation() {
-  let message = prompt.value
-
+  const message = prompt.value
   if (loading.value)
     return
 
   if (!message || message.trim() === '')
     return
-
   if (nowSelectChatModel.value && currentChatHistory.value)
     currentChatHistory.value.chatModel = nowSelectChatModel.value
 
@@ -139,67 +135,69 @@ async function onConversation() {
   scrollToBottom()
 
   try {
-    let lastText = ''
-    const fetchChatAPIOnce = async () => {
-      await fetchChatAPIProcess<Chat.ConversationResponse>({
-        roomId: +uuid,
-        uuid: chatUuid,
-        prompt: message,
-        uploadFileKeys,
-        options,
-        signal: controller.signal,
-        onDownloadProgress: ({ event }) => {
-          const xhr = event.target
-          const { responseText } = xhr
-          // Always process the final line
-          const lastIndex = responseText.lastIndexOf('\n', responseText.length - 2)
-          let chunk = responseText
-          if (lastIndex !== -1)
-            chunk = responseText.substring(lastIndex)
-          try {
-            const data = JSON.parse(chunk)
-            lastChatInfo = data
-            const usage = (data.detail && data.detail.usage)
-              ? {
-                  completion_tokens: data.detail.usage.completion_tokens || null,
-                  prompt_tokens: data.detail.usage.prompt_tokens || null,
-                  total_tokens: data.detail.usage.total_tokens || null,
-                  estimated: data.detail.usage.estimated || null,
-                }
-              : undefined
-            updateChat(
-              +uuid,
-              dataSources.value.length - 1,
-              {
-                dateTime: new Date().toLocaleString(),
-                text: lastText + (data.text ?? ''),
-                inversion: false,
-                error: false,
-                loading: true,
-                conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
-                requestOptions: { prompt: message, options: { ...options } },
-                usage,
-              },
-            )
+    // const lastText = ''
+    // const fetchChatAPIOnce = async () => {
+    //   await fetchChatAPIProcess<Chat.ConversationResponse>({
+    //     roomId: +uuid,
+    //     uuid: chatUuid,
+    //     prompt: message,
+    //     uploadFileKeys,
+    //     options,
+    //     signal: controller.signal,
+    //     onDownloadProgress: ({ event }) => {
+    //       const xhr = event.target
+    //       const { responseText } = xhr
+    //       // Always process the final line
+    //       const lastIndex = responseText.lastIndexOf('\n', responseText.length - 2)
+    //       let chunk = responseText
+    //       if (lastIndex !== -1)
+    //         chunk = responseText.substring(lastIndex)
+    //       try {
+    //         const data = JSON.parse(chunk)
+    //         lastChatInfo = data
+    //         const usage = (data.detail && data.detail.usage)
+    //           ? {
+    //               completion_tokens: data.detail.usage.completion_tokens || null,
+    //               prompt_tokens: data.detail.usage.prompt_tokens || null,
+    //               total_tokens: data.detail.usage.total_tokens || null,
+    //               estimated: data.detail.usage.estimated || null,
+    //             }
+    //           : undefined
+    //         updateChat(
+    //           +uuid,
+    //           dataSources.value.length - 1,
+    //           {
+    //             dateTime: new Date().toLocaleString(),
+    //             text: lastText + (data.text ?? ''),
+    //             inversion: false,
+    //             error: false,
+    //             loading: true,
+    //             conversationOptions: { conversationId: data.conversationId, parentMessageId: data.id },
+    //             requestOptions: { prompt: message, options: { ...options } },
+    //             usage,
+    //           },
+    //         )
 
-            if (openLongReply && data.detail && data.detail.choices.length > 0 && data.detail.choices[0].finish_reason === 'length') {
-              options.parentMessageId = data.id
-              lastText = data.text
-              message = ''
-              return fetchChatAPIOnce()
-            }
+    //         if (openLongReply && data.detail && data.detail.choices.length > 0 && data.detail.choices[0].finish_reason === 'length') {
+    //           options.parentMessageId = data.id
+    //           lastText = data.text
+    //           message = ''
+    //           return fetchChatAPIOnce()
+    //         }
 
-            scrollToBottomIfAtBottom()
-          }
-          catch (error) {
-            //
-          }
-        },
-      })
-      updateChatSome(+uuid, dataSources.value.length - 1, { loading: false })
-    }
+    //         scrollToBottomIfAtBottom()
+    //       }
+    //       catch (error) {
+    //         //
+    //       }
+    //     },
+    //   })
+    //   updateChatSome(+uuid, dataSources.value.length - 1, { loading: false })
+    // }
+    const data = await fetchChatAPI(message, sessionId.value)
+    console.log(data)
 
-    await fetchChatAPIOnce()
+    // await fetchChatAPIOnce()
   }
   catch (error: any) {
     const errorMessage = error?.message ?? t('common.wrong')
@@ -465,35 +463,35 @@ function updateCurrentNavIndex(index: number, newIndex: number) {
   currentNavIndexRef.value = newIndex
 }
 
-function handleClear() {
-  if (loading.value)
-    return
+// function handleClear() {
+//   if (loading.value)
+//     return
 
-  dialog.warning({
-    title: t('chat.clearChat'),
-    content: t('chat.clearChatConfirm'),
-    positiveText: t('common.yes'),
-    negativeText: t('common.no'),
-    onPositiveClick: () => {
-      chatStore.clearChatByUuid(+uuid)
-    },
-  })
-}
+//   dialog.warning({
+//     title: t('chat.clearChat'),
+//     content: t('chat.clearChatConfirm'),
+//     positiveText: t('common.yes'),
+//     negativeText: t('common.no'),
+//     onPositiveClick: () => {
+//       chatStore.clearChatByUuid(+uuid)
+//     },
+//   })
+// }
 
-function handleEnter(event: KeyboardEvent) {
-  if (!isMobile.value) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      handleSubmit()
-    }
-  }
-  else {
-    if (event.key === 'Enter' && event.ctrlKey) {
-      event.preventDefault()
-      handleSubmit()
-    }
-  }
-}
+// function handleEnter(event: KeyboardEvent) {
+//   if (!isMobile.value) {
+//     if (event.key === 'Enter' && !event.shiftKey) {
+//       event.preventDefault()
+//       handleSubmit()
+//     }
+//   }
+//   else {
+//     if (event.key === 'Enter' && event.ctrlKey) {
+//       event.preventDefault()
+//       handleSubmit()
+//     }
+//   }
+// }
 
 async function handleStop() {
   if (loading.value) {
@@ -507,9 +505,7 @@ async function loadMoreMessage(event: any) {
   const chatIndex = chatStore.chat.findIndex(d => d.uuid === +uuid)
   if (chatIndex <= -1 || chatStore.chat[chatIndex].data.length <= 0)
     return
-
   const scrollPosition = event.target.scrollHeight - event.target.scrollTop
-
   const lastId = chatStore.chat[chatIndex].data[0].uuid
   // await chatStore.syncChat({ uuid: +uuid } as Chat.History, lastId, () => {
   //   loadingms && loadingms.destroy()
@@ -549,17 +545,17 @@ async function handleScroll(event: any) {
   prevScrollTop = scrollTop
 }
 
-async function handleToggleUsingContext() {
-  if (!currentChatHistory.value)
-    return
+// async function handleToggleUsingContext() {
+//   if (!currentChatHistory.value)
+//     return
 
-  currentChatHistory.value.usingContext = !currentChatHistory.value.usingContext
-  chatStore.setUsingContext(currentChatHistory.value.usingContext, +uuid)
-  if (currentChatHistory.value.usingContext)
-    ms.success(t('chat.turnOnContext'))
-  else
-    ms.warning(t('chat.turnOffContext'))
-}
+//   currentChatHistory.value.usingContext = !currentChatHistory.value.usingContext
+//   chatStore.setUsingContext(currentChatHistory.value.usingContext, +uuid)
+//   if (currentChatHistory.value.usingContext)
+//     ms.success(t('chat.turnOnContext'))
+//   else
+//     ms.warning(t('chat.turnOffContext'))
+// }
 
 // 可优化部分
 // 搜索选项计算，这里使用value作为索引项，所以当出现重复value时渲染异常(多项同时出现选中效果)
@@ -655,13 +651,6 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col w-full h-full">
-    <HeaderComponent
-      v-if="isMobile"
-      :using-context="usingContext"
-      :show-prompt="showPrompt"
-      @export="handleExport" @toggle-using-context="handleToggleUsingContext"
-      @toggle-show-prompt="showPrompt = true"
-    />
     <main class="flex-1 overflow-hidden">
       <div id="scrollRef" ref="scrollRef" class="h-full overflow-hidden overflow-y-auto" @scroll="handleScroll">
         <div
@@ -713,17 +702,6 @@ onUnmounted(() => {
     <footer :class="footerClass">
       <div class="w-full max-w-screen-xl m-auto">
         <NSpace vertical>
-          <div v-if="isVisionModel && uploadFileKeysRef.length > 0" class="flex items-center space-x-2 h-10">
-            <NSpace>
-              <img v-for="(v, i) of uploadFileKeysRef" :key="i" :src="`/uploads/${v}`" class="max-h-10">
-              <HoverButton @click="handleDeleteUploadFile">
-                <span class="text-xl text-[#4f555e] dark:text-white">
-                  <SvgIcon icon="ri:delete-back-2-fill" />
-                </span>
-              </HoverButton>
-            </NSpace>
-          </div>
-
           <div class="flex items-center justify-between space-x-2">
             <NAutoComplete v-model:value="prompt" :options="searchOptions" :render-label="renderOption">
               <template #default="{ handleInput, handleBlur, handleFocus }">
@@ -733,11 +711,10 @@ onUnmounted(() => {
                   :disabled="!!authStore.session?.auth && !authStore.token && !authStore.session?.authProxyEnabled"
                   type="textarea"
                   :placeholder="placeholder"
-                  :autosize="{ minRows: isMobile ? 1 : 4, maxRows: isMobile ? 4 : 8 }"
+                  :autosize="{ minRows: isMobile ? x1 : 4, maxRows: isMobile ? 4 : 8 }"
                   @input="handleInput"
                   @focus="handleFocus"
                   @blur="handleBlur"
-                  @keypress="handleEnter"
                 />
               </template>
             </NAutoComplete>

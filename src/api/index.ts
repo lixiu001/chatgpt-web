@@ -4,6 +4,22 @@ import type { AnnounceConfig, AuditConfig, ConfigState, GiftCard, KeyConfig, Mai
 import { useAuthStore, useUserStore } from '@/store'
 import type { SettingsState } from '@/store/modules/user/helper'
 
+export function fetchChatAPI<T = any>(question: any, sessionId: string) {
+  return post<T>({
+    url: '/ejlnlyxsz9g11e7b',
+    data: {
+      question,
+      sessionId,
+    },
+  })
+}
+
+export function fetchSettionId<T = any>() {
+  return post<T>({
+    url: '/ejlnlyxsz9g11e7b',
+  })
+}
+
 export function fetchAnnouncement<T = any>() {
   return post<T>({
     url: '/announcement',
@@ -25,7 +41,8 @@ export function fetchChatAPIProcess<T = any>(
     uploadFileKeys?: string[]
     options?: { conversationId?: string; parentMessageId?: string }
     signal?: GenericAbortSignal
-    onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void },
+    onDownloadProgress?: (progressEvent: AxiosProgressEvent) => void
+  },
 ) {
   const userStore = useUserStore()
   const authStore = useAuthStore()
@@ -100,7 +117,7 @@ export function fetchLogin<T = any>(username: string, password: string, token?: 
 export function fetchLogout<T = any>() {
   return post<T>({
     url: '/user-logout',
-    data: { },
+    data: {},
   })
 }
 
@@ -164,12 +181,6 @@ export function fetchUpdateUserChatModel<T = any>(chatModel: string) {
   return post<T>({
     url: '/user-chat-model',
     data: { chatModel },
-  })
-}
-
-export function fetchSettionId<T = any>() {
-  return post<T>({
-    url: '/ejlnlyxsz9g11e7b',
   })
 }
 
@@ -293,7 +304,7 @@ export function fetchGetChatHistory<T = any>(roomId: number, lastId?: number, al
 export function fetchClearAllChat<T = any>() {
   return post<T>({
     url: '/chat-clear-all',
-    data: { },
+    data: {},
   })
 }
 

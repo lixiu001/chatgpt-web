@@ -166,15 +166,16 @@ function isEventTargetValid(event: any) {
       >
         <AvatarComponent :image="inversion" :only-default="isRecord" />
       </div>
-      <div
+      <!-- <div
         v-show="props.currentNavIndex === props.index && appStore.fastDelMsg"
+        n-space
         class="flex-grow flex items-center justify-center overflow-hidden rounded-full"
         :class="[inversion ? 'ml-2' : 'mr-2']"
       >
         <button class="focus:outline-none" style="opacity: 0.5;" @click="fastDelMsg">
           <SvgIcon class="text-lg" icon="ri:delete-bin-line" />
         </button>
-      </div>
+      </div> -->
     </div>
     <div class="overflow-hidden text-sm " :class="[inversion ? 'items-end' : 'items-start']">
       <p v-if="inversion" class="text-xs text-[#b4bbc4]" :class="[inversion ? 'text-right' : 'text-left']">
@@ -236,25 +237,6 @@ function isEventTargetValid(event: any) {
           :loading="loading"
           :as-raw-text="asRawText"
         />
-        <div class="flex flex-col excludeFastDel">
-          <button
-            v-if="!inversion && !isRecord"
-            class="mb-2 transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-300"
-            @click="handleRegenerate"
-          >
-            <SvgIcon icon="ri:restart-line" />
-          </button>
-          <NDropdown
-            :trigger="isMobile ? 'click' : 'hover'"
-            :placement="!inversion ? 'right' : 'left'"
-            :options="options"
-            @select="handleSelect"
-          >
-            <button class="transition text-neutral-300 hover:text-neutral-800 dark:hover:text-neutral-200">
-              <SvgIcon icon="ri:more-2-fill" />
-            </button>
-          </NDropdown>
-        </div>
       </div>
     </div>
   </div>

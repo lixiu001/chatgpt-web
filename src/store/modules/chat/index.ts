@@ -128,6 +128,7 @@ export const useChatStore = defineStore('chat-store', {
       await this.addHistory({
         title: 'New Chat',
         uuid: Date.now(),
+        sessionId,
         isEdit: false,
         usingContext: true,
         chatModel: userStore.userInfo.config.chatModel,

@@ -36,15 +36,15 @@ export default defineConfig((env) => {
       port: 1002,
       open: false,
       proxy: {
-        '/api': {
-          target: viteEnv.VITE_APP_API_BASE_URL,
-          changeOrigin: true, // 允许跨域
-          rewrite: path => path.replace('/api/', '/'),
-        },
-        '/uploads': {
-          target: viteEnv.VITE_APP_API_BASE_URL,
-          changeOrigin: true, // 允许跨域
-        },
+        // '/api': {
+        //   target: viteEnv.VITE_APP_API_BASE_URL,
+        //   changeOrigin: true, // 允许跨域
+        //   rewrite: path => path.replace('/api/', '/'),
+        // },
+        // '/uploads': {
+        //   target: viteEnv.VITE_APP_API_BASE_URL,
+        //   changeOrigin: true, // 允许跨域
+        // },
       },
     },
     build: {

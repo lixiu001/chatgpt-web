@@ -10,6 +10,7 @@ import {
   fetchGetChatHistory,
   fetchGetChatRooms,
   fetchRenameChatRoom,
+  fetchSettionId,
   fetchUpdateChatRoomChatModel,
   fetchUpdateChatRoomUsingContext,
   fetchUpdateUserChatModel,
@@ -122,6 +123,8 @@ export const useChatStore = defineStore('chat-store', {
     },
 
     async addNewHistory() {
+      const data = await fetchSettionId()
+      const sessionId = await this.extractSessionIds(data)
       const userStore = useUserStore()
       await this.addHistory({
         title: 'New Chat',
@@ -130,6 +133,25 @@ export const useChatStore = defineStore('chat-store', {
         usingContext: true,
         chatModel: userStore.userInfo.config.chatModel,
       })
+    },
+    extractSessionIds(data: any): any {
+      const events = data.split('\n\n')
+      const firstEvent = events[0]
+      if (!firstEvent)
+        return undefined
+      const lines = firstEvent.split('\n')
+      const dataLine = lines.find((line: string) => line.startsWith('data:'))
+
+      if (dataLine) {
+        try {
+          const jsonData = JSON.parse(dataLine.substring(5).trim())
+          return jsonData.sessionId
+        }
+        catch (e) {
+          console.error('Error parsing JSON data:', e)
+        }
+      }
+      return undefined
     },
 
     updateHistory(uuid: number, edit: Partial<Chat.History>) {

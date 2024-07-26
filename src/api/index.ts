@@ -167,6 +167,12 @@ export function fetchUpdateUserChatModel<T = any>(chatModel: string) {
   })
 }
 
+export function fetchSettionId<T = any>() {
+  return post<T>({
+    url: '/ejlnlyxsz9g11e7b',
+  })
+}
+
 export function fetchGetUsers<T = any>(page: number, size: number) {
   return get<T>({
     url: '/users',

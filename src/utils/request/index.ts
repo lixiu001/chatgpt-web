@@ -67,6 +67,12 @@ export function get<T = any>(
 export function post<T = any>(
   { url, data, method = 'POST', headers, onDownloadProgress, signal, beforeRequest, afterRequest }: HttpOption,
 ): Promise<Response<T>> {
+  headers = {
+    ...headers,
+    'token': '5b4cec67-18c3-4976-9a66-38a7f7ae7f15',
+    'digi-middleware-auth-app': 'XXX.XXX.XXX',
+    'accept-language': 'zh-CN',
+  }
   return http<T>({
     url,
     method,
